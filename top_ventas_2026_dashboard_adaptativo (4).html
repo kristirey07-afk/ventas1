@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top Ventas 2026 - Dashboard Analítico</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+            },
+            accent: {
+              500: '#10b981',
+              600: '#059669',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- PapaParse for CSV Parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+
+<body class="h-full font-sans antialiased flex flex-col min-h-screen text-slate-100 selection:bg-brand-500 selection:text-white">
+
+  <!-- TOP HEADER NAV -->
+  <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="bg-gradient-to-tr from-brand-600 to-indigo-500 p-2.5 rounded-xl shadow-lg shadow-brand-500/20">
+            <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-xl font-bold tracking-tight text-white">Top Ventas 2026</h1>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+                En vivo
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 hidden sm:block">Panel de control adaptativo e inteligencia de negocio</p>
+          </div>
+        </div>
+
+        <!-- Desktop Quick Actions -->
+        <div class="hidden md:flex items-center space-x-3">
+          <button onclick="openModal('customMetricModal')" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition border border-slate-700 shadow-sm active:scale-95">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-brand-500"></i>
+            <span>Nueva Variable</span>
+          </button>
+
+          <button onclick="openModal('csvModal')" class="flex items-center space-x-2 px-3.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium transition shadow-md shadow-brand-600/30 active:scale-95">
+            <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+            <span>Cargar CSV</span>
+          </button>
+
+          <button onclick="resetDataset()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition border border-slate-700" title="Restablecer datos originales">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <div class="md:hidden flex items-center space-x-2">
+          <button onclick="openModal('csvModal')" class="p-2 rounded-lg bg-brand-600 text-white shadow">
+            <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+          </button>
+          <button onclick="toggleMobileMenu()" class="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 focus:outline-none">
+            <i data-lucide="menu" id="menuOpenIcon" class="w-6 h-6"></i>
+            <i data-lucide="x" id="menuCloseIcon" class="w-6 h-6 hidden"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Slide Drawer -->
+    <div id="mobileDrawer" class="hidden md:hidden bg-slate-900 border-b border-slate-800 px-4 pt-3 pb-6 space-y-3">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1">Acciones Rápidas</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="openModal('customMetricModal'); toggleMobileMenu();" class="flex items-center justify-center space-x-2 p-2.5 rounded-lg bg-slate-800 text-slate-200 text-sm font-medium border border-slate-700">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-brand-500"></i>
+          <span>Nueva Variable</span>
+        </button>
+
+        <button onclick="openModal('csvModal'); toggleMobileMenu();" class="flex items-center justify-center space-x-2 p-2.5 rounded-lg bg-brand-600 text-white text-sm font-medium">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span>Subir CSV</span>
+        </button>
+      </div>
+      <button onclick="resetDataset(); toggleMobileMenu();" class="w-full flex items-center justify-center space-x-2 p-2 rounded-lg bg-slate-800/60 text-slate-400 text-xs font-medium border border-slate-700/60">
+        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+        <span>Restablecer Datos de Muestra</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- DATASET BANNER / ACTIVE INDICATOR -->
+    <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
+      <div class="flex items-center space-x-3.5">
+        <div class="p-3 rounded-xl bg-slate-800 text-brand-400 border border-slate-700 shrink-0">
+          <i data-lucide="database" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-xs uppercase font-bold tracking-wider text-brand-400">Conjunto Activo</span>
+            <span id="recordCountBadge" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">0 registros</span>
+          </div>
+          <h2 id="activeDatasetTitle" class="text-lg font-bold text-white truncate max-w-md sm:max-w-xl">Ventas Globales Q1-Q4 (2026)</h2>
+        </div>
+      </div>
+
+      <!-- Quick Filter / Global Range -->
+      <div class="w-full sm:w-auto flex items-center gap-2">
+        <div class="relative w-full sm:w-48">
+          <select id="regionFilter" onchange="applyFilters()" class="w-full bg-slate-900 text-slate-200 text-xs sm:text-sm rounded-lg border border-slate-700 px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="ALL">Todas las Regiones</option>
+          </select>
+        </div>
+        <div class="relative w-full sm:w-48">
+          <select id="channelFilter" onchange="applyFilters()" class="w-full bg-slate-900 text-slate-200 text-xs sm:text-sm rounded-lg border border-slate-700 px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="ALL">Todos los Canales</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- DYNAMIC METRICS KPI CARDS (ADAPTIVE GRID) -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+          <i data-lucide="layout-grid" class="w-4 h-4 text-brand-500"></i>
+          Métricas e Indicadores
+        </h3>
+        <button onclick="openModal('customMetricModal')" class="text-xs text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          Añadir Variable
+        </button>
+      </div>
+
+      <!-- Dynamic Cards Container -->
+      <div id="kpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- CHARTS SECTION (2-COL & FULL-WIDTH RESPONSIVE) -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Main Trend Chart (2 Cols on lg) -->
+      <div class="lg:col-span-2 glass-card rounded-2xl p-4 sm:p-6 flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="line-chart" class="w-5 h-5 text-brand-500"></i>
+              Evolución Temporal de Métricas
+            </h3>
+            <p class="text-xs text-slate-400">Comportamiento mensual según la variable seleccionada</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="trendMetricSelect" onchange="renderCharts()" class="bg-slate-900 text-slate-200 text-xs rounded-lg border border-slate-700 px-3 py-1.5 focus:ring-1 focus:ring-brand-500">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+        </div>
+        <div class="relative w-full h-64 sm:h-80">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Categorical Breakdown (1 Col on lg) -->
+      <div class="glass-card rounded-2xl p-4 sm:p-6 flex flex-col justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-5 h-5 text-indigo-400"></i>
+              Distribución por Canal
+            </h3>
+            <p class="text-xs text-slate-400">Desglose porcentual</p>
+          </div>
+          <select id="channelMetricSelect" onchange="renderCharts()" class="bg-slate-900 text-slate-200 text-xs rounded-lg border border-slate-700 px-2.5 py-1 focus:ring-1 focus:ring-brand-500">
+            <!-- Dynamically populated -->
+          </select>
+        </div>
+        <div class="relative w-full h-64 sm:h-80 flex items-center justify-center">
+          <canvas id="channelChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Secondary Chart: Custom Metric Dynamic Scatter/Bar Comparison -->
+      <div class="lg:col-span-3 glass-card rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i>
+              Rendimiento Comparativo por Vendedor
+            </h3>
+            <p class="text-xs text-slate-400">Análisis comparativo por miembro del equipo</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="salespersonMetricSelect" onchange="renderCharts()" class="bg-slate-900 text-slate-200 text-xs rounded-lg border border-slate-700 px-3 py-1.5">
+              <!-- Dynamic -->
+            </select>
+          </div>
+        </div>
+        <div class="relative w-full h-72 sm:h-80">
+          <canvas id="salespersonChart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- INTERACTIVE DATA TABLE -->
+    <section class="glass-card rounded-2xl p-4 sm:p-6 overflow-hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white flex items-center gap-2">
+            <i data-lucide="table" class="w-5 h-5 text-amber-400"></i>
+            Explorador de Datos Detallado
+          </h3>
+          <p class="text-xs text-slate-400">Visualiza, busca y filtra todos los registros en tiempo real</p>
+        </div>
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Buscar en tabla..." class="w-full bg-slate-900 text-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2 rounded-lg border border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <button onclick="exportToCSV()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 flex items-center gap-1.5 shrink-0" title="Exportar vista a CSV">
+            <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
+            <span class="hidden sm:inline">Exportar</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Responsive Table Container -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800">
+        <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+          <thead id="tableHeader" class="bg-slate-950/80 text-slate-400 uppercase tracking-wider text-[11px] border-b border-slate-800">
+            <!-- Rendered dynamically -->
+          </thead>
+          <tbody id="tableBody" class="divide-y divide-slate-800/60 bg-slate-900/40 font-medium">
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Table Footer / Stats -->
+      <div class="mt-3 flex items-center justify-between text-xs text-slate-400">
+        <span id="showingRecordsText">Mostrando 0 registros</span>
+        <span id="metricCountText" class="text-brand-400">0 variables configuradas</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL 1: CSV UPLOAD AND DATA MANAGEMENT -->
+  <div id="csvModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card bg-slate-900 rounded-2xl max-w-xl w-full border border-slate-700 shadow-2xl p-6 relative space-y-5 animate-in fade-in zoom-in duration-200">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20">
+            <i data-lucide="file-up" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Subir y Reemplazar Conjunto de Datos</h3>
+            <p class="text-xs text-slate-400">Importa un archivo CSV con tus propias ventas y métricas</p>
+          </div>
+        </div>
+        <button onclick="closeModal('csvModal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div id="dropZone" onclick="document.getElementById('csvFileInput').click()" class="border-2 border-dashed border-slate-700 hover:border-brand-500 rounded-xl p-8 text-center bg-slate-950/40 cursor-pointer transition flex flex-col items-center justify-center space-y-3">
+        <div class="p-3 bg-slate-800/80 rounded-full text-brand-400">
+          <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+        </div>
+        <div>
+          <p class="text-sm font-semibold text-slate-200">Haz clic para seleccionar o arrastra tu archivo CSV aquí</p>
+          <p class="text-xs text-slate-400 mt-1">Soporta formato UTF-8 con delimitador de coma (,) o punto y coma (;)</p>
+        </div>
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleFileUpload(event)" />
+      </div>
+
+      <!-- Sample Templates Quick Selector -->
+      <div class="space-y-2">
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">O selecciona una plantilla de ejemplo:</label>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <button onclick="loadPresetDataset('tech')" class="p-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-left transition flex items-center space-x-3">
+            <i data-lucide="laptop" class="w-5 h-5 text-brand-400"></i>
+            <div>
+              <p class="text-xs font-bold text-slate-200">Ventas Tech & Software 2026</p>
+              <p class="text-[11px] text-slate-400">SaaS, Licencias y Conversión</p>
+            </div>
+          </button>
+          <button onclick="loadPresetDataset('retail')" class="p-3 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-left transition flex items-center space-x-3">
+            <i data-lucide="shopping-bag" class="w-5 h-5 text-emerald-400"></i>
+            <div>
+              <p class="text-xs font-bold text-slate-200">Retail & E-Commerce 2026</p>
+              <p class="text-[11px] text-slate-400">Pedidos, Unidades y Calificación</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-2 flex justify-end">
+        <button onclick="closeModal('csvModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700">
+          Cancelar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: ADD DYNAMIC CUSTOM VARIABLE -->
+  <div id="customMetricModal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card bg-slate-900 rounded-2xl max-w-lg w-full border border-slate-700 shadow-2xl p-6 relative space-y-5">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div class="flex items-center space-x-3">
+          <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <i data-lucide="plus-circle" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Añadir Nueva Variable</h3>
+            <p class="text-xs text-slate-400">Incorpora métricas como Unidades, Tasa de Conversión, Satisfacción, etc.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('customMetricModal')" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Form Inputs -->
+      <form id="customMetricForm" onsubmit="handleCreateCustomMetric(event)" class="space-y-4">
+        
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Nombre de la Variable / Métrica *</label>
+          <input type="text" id="metricName" required placeholder="Ej. Tasa de Conversión, Satisfacción, NPS..." class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Unidad / Formato</label>
+            <select id="metricUnit" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <option value="currency">Moneda (€ / $)</option>
+              <option value="number">Número Entero (Unidades)</option>
+              <option value="percent">Porcentaje (%)</option>
+              <option value="score">Puntuación / Rating (1-5 ó 1-10)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Tipo de Agregación</label>
+            <select id="metricAggregation" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+              <option value="sum">Suma Total</option>
+              <option value="avg">Promedio (Media)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Generación de Valores Iniciales</label>
+          <select id="metricGenerationType" onchange="toggleFormulaInputs()" class="w-full bg-slate-950 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-brand-500 focus:outline-none">
+            <option value="random">Generar valores aleatorios realistas</option>
+            <option value="formula">Calcular como proporción de otra variable</option>
+          </select>
+        </div>
+
+        <!-- Dynamic formula inputs -->
+        <div id="formulaInputs" class="hidden p-3 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+          <label class="block text-xs font-medium text-slate-400">Multiplicar por variable existente:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="formulaBaseMetric" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg p-2"></select>
+            <input type="number" step="0.01" id="formulaFactor" value="0.15" placeholder="Factor (ej. 0.15)" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg p-2">
+          </div>
+        </div>
+
+        <div class="pt-3 flex justify-end space-x-2 border-t border-slate-800">
+          <button type="button" onclick="closeModal('customMetricModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg border border-slate-700">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-md transition flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Crear Métrica</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+      <p>© 2026 Top Ventas 2026 — Plena adaptabilidad y análisis flexible.</p>
+      <p>Sistema optimizado para Móvil, Tablet y Escritorio</p>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // Global Application State
+    let state = {
+      datasetName: "Top Ventas 2026 - Datos Corporativos",
+      rawData: [],
+      filteredData: [],
+      metrics: [], // Array of metric definitions: { key, label, unit, agg, isCustom }
+      dimensions: {
+        regionKey: 'Region',
+        channelKey: 'Canal',
+        salespersonKey: 'Vendedor',
+        dateKey: 'Fecha'
+      },
+      charts: {}
+    };
+
+    // Standard Default Sample Data generator
+    function getDefaultDataset() {
+      const vendors = ['Ana Martínez', 'Carlos Gómez', 'Laura Ríos', 'David Chen', 'Elena Beltrán'];
+      const regions = ['Norte', 'Sur', 'Este', 'Oeste', 'Central'];
+      const channels = ['E-commerce', 'Venta Directa', 'Distribuidores', 'B2B Enterprise'];
+      const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+      const data = [];
+      let id = 1001;
+
+      for (let m = 0; m < months.length; m++) {
+        for (let i = 0; i < 4; i++) {
+          const ingresos = Math.floor(Math.random() * 8000) + 2000;
+          const unidades = Math.floor(ingresos / (Math.random() * 40 + 20));
+          const conversion = parseFloat((Math.random() * 4 + 1.2).toFixed(2)); // %
+          const satisfaccion = parseFloat((Math.random() * 1.8 + 3.2).toFixed(1)); // 1-5
+          const costeAdquisicion = Math.floor(ingresos * (Math.random() * 0.2 + 0.1));
+
+          data.push({
+            ID: `TRX-${id++}`,
+            Fecha: `2026-${String(m + 1).padStart(2, '0')}-15`,
+            Mes: months[m],
+            Vendedor: vendors[Math.floor(Math.random() * vendors.length)],
+            Region: regions[Math.floor(Math.random() * regions.length)],
+            Canal: channels[Math.floor(Math.random() * channels.length)],
+            Ingresos: ingresos,
+            "Unidades Vendidas": unidades,
+            "Tasa de Conversión (%)": conversion,
+            "Satisfacción (1-5)": satisfaccion,
+            "Coste Adquisición (€)": costeAdquisicion
+          });
+        }
+      }
+      return data;
+    }
+
+    // Default metrics catalog
+    const defaultMetrics = [
+      { key: 'Ingresos', label: 'Ingresos Totales', unit: 'currency', agg: 'sum', isCustom: false },
+      { key: 'Unidades Vendidas', label: 'Unidades Vendidas', unit: 'number', agg: 'sum', isCustom: false },
+      { key: 'Tasa de Conversión (%)', label: 'Tasa de Conversión', unit: 'percent', agg: 'avg', isCustom: false },
+      { key: 'Satisfacción (1-5)', label: 'Satisfacción Cliente', unit: 'score', agg: 'avg', isCustom: false },
+      { key: 'Coste Adquisición (€)', label: 'Coste Adquisición', unit: 'currency', agg: 'sum', isCustom: false }
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initApp();
+    });
+
+    function initApp() {
+      const data = getDefaultDataset();
+      state.rawData = data;
+      state.filteredData = [...data];
+      state.metrics = [...defaultMetrics];
+      state.datasetName = "Top Ventas 2026 - Datos Corporativos";
+
+      populateFilterDropdowns();
+      populateMetricDropdowns();
+      applyFilters();
+      
+      lucide.createIcons();
+    }
+
+    function populateFilterDropdowns() {
+      const regionSelect = document.getElementById('regionFilter');
+      const channelSelect = document.getElementById('channelFilter');
+
+      // Extract unique regions & channels
+      const regions = [...new Set(state.rawData.map(item => item.Region || item.region || item.Región))].filter(Boolean);
+      const channels = [...new Set(state.rawData.map(item => item.Canal || item.canal || item.Channel))].filter(Boolean);
+
+      regionSelect.innerHTML = '<option value="ALL">Todas las Regiones</option>' + 
+        regions.map(r => `<option value="${r}">${r}</option>`).join('');
+
+      channelSelect.innerHTML = '<option value="ALL">Todos los Canales</option>' + 
+        channels.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    function populateMetricDropdowns() {
+      const trendSelect = document.getElementById('trendMetricSelect');
+      const channelSelect = document.getElementById('channelMetricSelect');
+      const salespersonSelect = document.getElementById('salespersonMetricSelect');
+      const baseMetricSelect = document.getElementById('formulaBaseMetric');
+
+      const optionsHtml = state.metrics.map(m => `<option value="${m.key}">${m.label}</option>`).join('');
+
+      trendSelect.innerHTML = optionsHtml;
+      channelSelect.innerHTML = optionsHtml;
+      salespersonSelect.innerHTML = optionsHtml;
+      baseMetricSelect.innerHTML = optionsHtml;
+
+      // Select default indices if available
+      if (state.metrics.length > 0) trendSelect.value = state.metrics[0].key;
+      if (state.metrics.length > 1) channelSelect.value = state.metrics[1].key;
+      if (state.metrics.length > 2) salespersonSelect.value = state.metrics[2].key;
+    }
+
+    function applyFilters() {
+      const selectedRegion = document.getElementById('regionFilter').value;
+      const selectedChannel = document.getElementById('channelFilter').value;
+      const searchText = document.getElementById('searchInput').value.toLowerCase().trim();
+
+      state.filteredData = state.rawData.filter(row => {
+        const matchesRegion = selectedRegion === 'ALL' || row.Region === selectedRegion || row.Región === selectedRegion;
+        const matchesChannel = selectedChannel === 'ALL' || row.Canal === selectedChannel || row.Channel === selectedChannel;
+        
+        let matchesSearch = true;
+        if (searchText) {
+          matchesSearch = Object.values(row).some(val => 
+            String(val).toLowerCase().includes(searchText)
+          );
+        }
+
+        return matchesRegion && matchesChannel && matchesSearch;
+      });
+
+      // Update UI Components
+      updateHeaderStats();
+      renderKPICards();
+      renderCharts();
+      renderTable();
+    }
+
+    function updateHeaderStats() {
+      document.getElementById('activeDatasetTitle').innerText = state.datasetName;
+      document.getElementById('recordCountBadge').innerText = `${state.filteredData.length} registros`;
+      document.getElementById('showingRecordsText').innerText = `Mostrando ${state.filteredData.length} de ${state.rawData.length} registros`;
+      document.getElementById('metricCountText').innerText = `${state.metrics.length} variables disponibles`;
+    }
+
+    function formatValue(value, unit) {
+      if (value === null || value === undefined || isNaN(value)) return 'N/A';
+
+      switch (unit) {
+        case 'currency':
+          return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(value);
+        case 'percent':
+          return `${Number(value).toFixed(1)}%`;
+        case 'score':
+          return `${Number(value).toFixed(1)} / 5`;
+        case 'number':
+        default:
+          return new Intl.NumberFormat('es-ES').format(Math.round(value));
+      }
+    }
+
+    function renderKPICards() {
+      const kpiGrid = document.getElementById('kpiGrid');
+      kpiGrid.innerHTML = '';
+
+      state.metrics.forEach((metric, index) => {
+        const values = state.filteredData.map(d => parseFloat(d[metric.key])).filter(v => !isNaN(v));
+        
+        let calculatedVal = 0;
+        if (values.length > 0) {
+          if (metric.agg === 'sum') {
+            calculatedVal = values.reduce((a, b) => a + b, 0);
+          } else {
+            calculatedVal = values.reduce((a, b) => a + b, 0) / values.length;
+          }
+        }
+
+        const isEven = index % 2 === 0;
+        const cardHtml = `
+          <div class="glass-card rounded-2xl p-4 sm:p-5 flex flex-col justify-between border border-slate-800 hover:border-slate-700 transition relative overflow-hidden group">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">${metric.label}</p>
+                <h4 class="text-xl sm:text-2xl font-extrabold text-white mt-1.5 tracking-tight">
+                  ${formatValue(calculatedVal, metric.unit)}
+                </h4>
+              </div>
+              <div class="p-2.5 rounded-xl ${isEven ? 'bg-brand-500/10 text-brand-400' : 'bg-indigo-500/10 text-indigo-400'} border border-slate-700">
+                <i data-lucide="${metric.unit === 'currency' ? 'euro' : metric.unit === 'percent' ? 'percent' : metric.unit === 'score' ? 'star' : 'layers'}" class="w-5 h-5"></i>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <span class="text-slate-400">Modo: <strong class="text-slate-300 uppercase">${metric.agg}</strong></span>
+              ${metric.isCustom ? 
+                `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Personalizada</span>` : 
+                `<span class="text-slate-500 text-[11px]">Estándar</span>`
+              }
+            </div>
+          </div>
+        `;
+
+        kpiGrid.insertAdjacentHTML('beforeend', cardHtml);
+      });
+
+      lucide.createIcons();
+    }
+
+    function renderCharts() {
+      renderTrendChart();
+      renderChannelChart();
+      renderSalespersonChart();
+    }
+
+    function renderTrendChart() {
+      const selectedKey = document.getElementById('trendMetricSelect').value;
+      const metricDef = state.metrics.find(m => m.key === selectedKey) || state.metrics[0];
+
+      // Group by Month or Fecha
+      const monthlyData = {};
+      state.filteredData.forEach(row => {
+        const monthKey = row.Mes || row.Fecha?.substring(0, 7) || 'General';
+        const val = parseFloat(row[selectedKey]) || 0;
+        
+        if (!monthlyData[monthKey]) monthlyData[monthKey] = [];
+        monthlyData[monthKey].push(val);
+      });
+
+      const labels = Object.keys(monthlyData);
+      const dataValues = labels.map(m => {
+        const arr = monthlyData[m];
+        if (metricDef?.agg === 'avg') {
+          return arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+        }
+        return arr.reduce((a, b) => a + b, 0);
+      });
+
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (state.charts.trend) state.charts.trend.destroy();
+
+      state.charts.trend = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels.length ? labels : ['Sin datos'],
+          datasets: [{
+            label: metricDef ? metricDef.label : selectedKey,
+            data: dataValues,
+            borderColor: '#0ea5e9',
+            backgroundColor: 'rgba(14, 165, 233, 0.15)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: '#38bdf8',
+            pointRadius: 4,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${metricDef.label}: ${formatValue(ctx.raw, metricDef.unit)}`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    function renderChannelChart() {
+      const selectedKey = document.getElementById('channelMetricSelect').value;
+      const metricDef = state.metrics.find(m => m.key === selectedKey) || state.metrics[0];
+
+      const channelGroup = {};
+      state.filteredData.forEach(row => {
+        const channel = row.Canal || row.Channel || 'Otros';
+        const val = parseFloat(row[selectedKey]) || 0;
+        channelGroup[channel] = (channelGroup[channel] || 0) + val;
+      });
+
+      const labels = Object.keys(channelGroup);
+      const dataValues = Object.values(channelGroup);
+
+      const ctx = document.getElementById('channelChart').getContext('2d');
+      if (state.charts.channel) state.charts.channel.destroy();
+
+      state.charts.channel = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: dataValues,
+            backgroundColor: [
+              '#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6'
+            ],
+            borderWidth: 2,
+            borderColor: '#0f172a'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#cbd5e1', font: { size: 11 } }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.label}: ${formatValue(ctx.raw, metricDef.unit)}`
+              }
+            }
+          },
+          cutout: '68%'
+        }
+      });
+    }
+
+    function renderSalespersonChart() {
+      const selectedKey = document.getElementById('salespersonMetricSelect').value;
+      const metricDef = state.metrics.find(m => m.key === selectedKey) || state.metrics[0];
+
+      const vendorGroup = {};
+      state.filteredData.forEach(row => {
+        const vendor = row.Vendedor || row.Salesperson || row.Empleado || 'Desconocido';
+        const val = parseFloat(row[selectedKey]) || 0;
+        if (!vendorGroup[vendor]) vendorGroup[vendor] = [];
+        vendorGroup[vendor].push(val);
+      });
+
+      const labels = Object.keys(vendorGroup);
+      const dataValues = labels.map(v => {
+        const arr = vendorGroup[v];
+        if (metricDef?.agg === 'avg') {
+          return arr.reduce((a, b) => a + b, 0) / (arr.length || 1);
+        }
+        return arr.reduce((a, b) => a + b, 0);
+      });
+
+      const ctx = document.getElementById('salespersonChart').getContext('2d');
+      if (state.charts.salesperson) state.charts.salesperson.destroy();
+
+      state.charts.salesperson = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: metricDef ? metricDef.label : selectedKey,
+            data: dataValues,
+            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+            borderColor: '#10b981',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${metricDef.label}: ${formatValue(ctx.raw, metricDef.unit)}`
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    function renderTable() {
+      const tableHeader = document.getElementById('tableHeader');
+      const tableBody = document.getElementById('tableBody');
+
+      if (state.filteredData.length === 0) {
+        tableHeader.innerHTML = '<tr><th class="p-4 text-center">Sin resultados</th></tr>';
+        tableBody.innerHTML = '<tr><td class="p-8 text-center text-slate-500">No hay datos que coincidan con los filtros aplicados.</td></tr>';
+        return;
+      }
+
+      // Dynamic Columns from keys of the first row
+      const allKeys = Object.keys(state.filteredData[0]);
+
+      tableHeader.innerHTML = `
+        <tr>
+          ${allKeys.map(key => `<th class="px-4 py-3 font-semibold text-slate-300">${key}</th>`).join('')}
+        </tr>
+      `;
+
+      // Render up to 50 rows for performance
+      const rowsToRender = state.filteredData.slice(0, 50);
+
+      tableBody.innerHTML = rowsToRender.map(row => {
+        return `
+          <tr class="hover:bg-slate-800/50 transition">
+            ${allKeys.map(key => {
+              const val = row[key];
+              const metricDef = state.metrics.find(m => m.key === key);
+              const isNumeric = metricDef || (typeof val === 'number');
+
+              return `
+                <td class="px-4 py-3 whitespace-nowrap text-slate-200">
+                  ${metricDef ? formatValue(val, metricDef.unit) : val}
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      Papa.parse(file, {
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          if (results.data && results.data.length > 0) {
+            processParsedCSV(file.name, results.data);
+            closeModal('csvModal');
+          } else {
+            alert("No se pudieron leer registros válidos del archivo CSV.");
+          }
+        },
+        error: function(err) {
+          alert("Error al leer el archivo CSV: " + err.message);
+        }
+      });
+    }
+
+    function processParsedCSV(fileName, parsedRows) {
+      state.datasetName = fileName.replace('.csv', '');
+      state.rawData = parsedRows;
+      state.filteredData = [...parsedRows];
+
+      // Auto-detect numeric columns as metrics
+      const sampleRow = parsedRows[0];
+      const detectedMetrics = [];
+
+      Object.keys(sampleRow).forEach(key => {
+        const val = sampleRow[key];
+        if (typeof val === 'number') {
+          let unit = 'number';
+          const lowerKey = key.toLowerCase();
+
+          if (lowerKey.includes('ingreso') || lowerKey.includes('precio') || lowerKey.includes('coste') || lowerKey.includes('$') || lowerKey.includes('€')) {
+            unit = 'currency';
+          } else if (lowerKey.includes('%') || lowerKey.includes('tasa') || lowerKey.includes('porcentaje') || lowerKey.includes('conversion')) {
+            unit = 'percent';
+          } else if (lowerKey.includes('satisfaccion') || lowerKey.includes('rating') || lowerKey.includes('puntuacion')) {
+            unit = 'score';
+          }
+
+          detectedMetrics.push({
+            key: key,
+            label: key,
+            unit: unit,
+            agg: (unit === 'percent' || unit === 'score') ? 'avg' : 'sum',
+            isCustom: false
+          });
+        }
+      });
+
+      if (detectedMetrics.length > 0) {
+        state.metrics = detectedMetrics;
+      }
+
+      populateFilterDropdowns();
+      populateMetricDropdowns();
+      applyFilters();
+    }
+
+    function loadPresetDataset(presetType) {
+      if (presetType === 'tech') {
+        state.datasetName = "Software SaaS & Subscripciones 2026";
+        state.rawData = [
+          { Fecha: "2026-01-10", Vendedor: "Ana Martínez", Region: "Norte", Canal: "Digital Ads", "Ingresos Recurrentes (€)": 12500, "MRR Nuevo (€)": 2400, "Tasa Conversión Lead (%)": 4.2, "NPS Cliente": 4.8 },
+          { Fecha: "2026-01-22", Vendedor: "Carlos Gómez", Region: "Sur", Canal: "Outbound", "Ingresos Recurrentes (€)": 18200, "MRR Nuevo (€)": 3100, "Tasa Conversión Lead (%)": 3.8, "NPS Cliente": 4.2 },
+          { Fecha: "2026-02-14", Vendedor: "Laura Ríos", Region: "Este", Canal: "Partners", "Ingresos Recurrentes (€)": 22100, "MRR Nuevo (€)": 4500, "Tasa Conversión Lead (%)": 5.1, "NPS Cliente": 4.9 },
+          { Fecha: "2026-02-28", Vendedor: "David Chen", Region: "Oeste", Canal: "Digital Ads", "Ingresos Recurrentes (€)": 15400, "MRR Nuevo (€)": 1900, "Tasa Conversión Lead (%)": 2.9, "NPS Cliente": 4.1 },
+          { Fecha: "2026-03-15", Vendedor: "Elena Beltrán", Region: "Central", Canal: "Outbound", "Ingresos Recurrentes (€)": 28900, "MRR Nuevo (€)": 5200, "Tasa Conversión Lead (%)": 6.0, "NPS Cliente": 4.7 }
+        ];
+        state.metrics = [
+          { key: 'Ingresos Recurrentes (€)', label: 'Ingresos Recurrentes (ARR)', unit: 'currency', agg: 'sum', isCustom: false },
+          { key: 'MRR Nuevo (€)', label: 'MRR Nuevo Generado', unit: 'currency', agg: 'sum', isCustom: false },
+          { key: 'Tasa Conversión Lead (%)', label: 'Conversión Lead-SaaS', unit: 'percent', agg: 'avg', isCustom: false },
+          { key: 'NPS Cliente', label: 'Satisfacción NPS', unit: 'score', agg: 'avg', isCustom: false }
+        ];
+      } else if (presetType === 'retail') {
+        state.datasetName = "Retail Moda & Complementos 2026";
+        state.rawData = [
+          { Fecha: "2026-01-05", Vendedor: "Tienda Madrid", Region: "Central", Canal: "Tienda Física", "Ventas Totales (€)": 45000, "Unidades Vendidas": 1200, "Ticket Medio (€)": 37.5, "Valoración Tienda": 4.6 },
+          { Fecha: "2026-01-18", Vendedor: "E-Commerce ES", Region: "Norte", Canal: "Online Web", "Ventas Totales (€)": 78000, "Unidades Vendidas": 2400, "Ticket Medio (€)": 32.5, "Valoración Tienda": 4.4 },
+          { Fecha: "2026-02-12", Vendedor: "Tienda Barcelona", Region: "Este", Canal: "Tienda Física", "Ventas Totales (€)": 52000, "Unidades Vendidas": 1350, "Ticket Medio (€)": 38.5, "Valoración Tienda": 4.8 },
+          { Fecha: "2026-02-25", Vendedor: "Marketplace Amazon", Region: "Oeste", Canal: "Marketplace", "Ventas Totales (€)": 61000, "Unidades Vendidas": 1900, "Ticket Medio (€)": 32.1, "Valoración Tienda": 4.2 }
+        ];
+        state.metrics = [
+          { key: 'Ventas Totales (€)', label: 'Ventas Totales Retail', unit: 'currency', agg: 'sum', isCustom: false },
+          { key: 'Unidades Vendidas', label: 'Unidades Físicas Vendidas', unit: 'number', agg: 'sum', isCustom: false },
+          { key: 'Ticket Medio (€)', label: 'Ticket Medio Cesta', unit: 'currency', agg: 'avg', isCustom: false },
+          { key: 'Valoración Tienda', label: 'Valoración del Cliente', unit: 'score', agg: 'avg', isCustom: false }
+        ];
+      }
+
+      populateFilterDropdowns();
+      populateMetricDropdowns();
+      applyFilters();
+      closeModal('csvModal');
+    }
+
+    function toggleFormulaInputs() {
+      const type = document.getElementById('metricGenerationType').value;
+      const formulaContainer = document.getElementById('formulaInputs');
+      if (type === 'formula') {
+        formulaContainer.classList.remove('hidden');
+      } else {
+        formulaContainer.classList.add('hidden');
+      }
+    }
+
+    function handleCreateCustomMetric(event) {
+      event.preventDefault();
+
+      const name = document.getElementById('metricName').value.trim();
+      const unit = document.getElementById('metricUnit').value;
+      const agg = document.getElementById('metricAggregation').value;
+      const genType = document.getElementById('metricGenerationType').value;
+
+      if (!name) return;
+
+      // Add custom metric to each data row
+      if (genType === 'formula') {
+        const baseMetric = document.getElementById('formulaBaseMetric').value;
+        const factor = parseFloat(document.getElementById('formulaFactor').value) || 0.1;
+
+        state.rawData.forEach(row => {
+          const baseVal = parseFloat(row[baseMetric]) || 100;
+          row[name] = parseFloat((baseVal * factor).toFixed(2));
+        });
+      } else {
+        // Random generation matching unit
+        state.rawData.forEach(row => {
+          let val = 0;
+          if (unit === 'currency') val = Math.floor(Math.random() * 3000 + 500);
+          else if (unit === 'percent') val = parseFloat((Math.random() * 8 + 1).toFixed(2));
+          else if (unit === 'score') val = parseFloat((Math.random() * 1.5 + 3.5).toFixed(1));
+          else val = Math.floor(Math.random() * 200 + 10);
+
+          row[name] = val;
+        });
+      }
+
+      // Add to metrics configuration catalog
+      state.metrics.push({
+        key: name,
+        label: name,
+        unit: unit,
+        agg: agg,
+        isCustom: true
+      });
+
+      // Refresh Dashboard
+      populateMetricDropdowns();
+      applyFilters();
+      
+      // Clear & Close Modal
+      document.getElementById('customMetricForm').reset();
+      closeModal('customMetricModal');
+    }
+
+    function exportToCSV() {
+      if (!state.filteredData.length) {
+        alert("No hay datos disponibles para exportar.");
+        return;
+      }
+
+      const csv = Papa.unparse(state.filteredData);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${state.datasetName.replace(/\s+/g, '_')}_export.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function resetDataset() {
+      initApp();
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function toggleMobileMenu() {
+      const drawer = document.getElementById('mobileDrawer');
+      const openIcon = document.getElementById('menuOpenIcon');
+      const closeIcon = document.getElementById('menuCloseIcon');
+
+      const isHidden = drawer.classList.contains('hidden');
+      if (isHidden) {
+        drawer.classList.remove('hidden');
+        openIcon.classList.add('hidden');
+        closeIcon.classList.remove('hidden');
+      } else {
+        drawer.classList.add('hidden');
+        openIcon.classList.remove('hidden');
+        closeIcon.classList.add('hidden');
+      }
+    }
+  </script>
+</body>
+</html>
